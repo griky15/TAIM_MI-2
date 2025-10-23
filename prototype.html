@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador Leap Motion - Instrumento Gestual</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            color: white;
+            overflow: hidden;
+        }
+
+        .header {
+            padding: 20px;
+            background: rgba(0,0,0,0.3);
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        .controls {
+            padding: 15px;
+            background: rgba(0,0,0,0.2);
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .control-group label {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+
+        select, button {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 5px;
+            font-size: 14px;
+            cursor: pointer;
+            background: rgba(255,255,255,0.9);
+        }
+
+        button {
+            background: #4CAF50;
+            color: white;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background: #45a049;
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .main-area {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #canvas {
+            width: 100%;
+            height: 100%;
+            cursor: crosshair;
+        }
+
+        .info-overlay {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0,0,0,0.7);
+            padding: 15px;
+            border-radius: 10px;
+            font-family: monospace;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .info-overlay div {
+            margin: 5px 0;
+        }
+
+        .instructions {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.7);
+            padding: 15px 30px;
+            border-radius: 10px;
+            text-align: center;
+            font-size: 14px;
+        }
+
+        .visual-indicator {
+            position: absolute;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.1) 70%);
+            pointer-events: none;
+            transition: all 0.1s ease;
+            box-shadow: 0 0 30px rgba(255,255,255,0.5);
+        }
+
+        .note-label {
+            position: absolute;
+            background: rgba(0,0,0,0.8);
+            color: #4CAF50;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-weight: bold;
+            font-size: 18px;
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🎵 Simulador de Instrumento Gestual (Protótipo Leap Motion)</h1>
+        <p>Move o rato para simular os gestos das mãos no espaço 3D</p>
+    </div>
+
+    <div class="controls">
+        <div class="control-group">
+            <label>Escala Musical:</label>
+            <select id="scaleSelect">
+                <option value="major">Dó Maior</option>
+                <option value="minor">Dó Menor</option>
+                <option value="pentatonic">Pentatónica</option>
+                <option value="blues">Blues</option>
+                <option value="chromatic">Cromática</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label>Forma de Onda:</label>
+            <select id="waveformSelect">
+                <option value="sine">Sine (Suave)</option>
+                <option value="triangle">Triangle (Médio)</option>
+                <option value="sawtooth">Sawtooth (Brilhante)</option>
+                <option value="square">Square (8-bit)</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label>Controlo:</label>
+            <button id="startButton">▶ Iniciar Áudio</button>
+        </div>
+    </div>
+
+    <div class="main-area">
+        <canvas id="canvas"></canvas>
+        
+        <div class="info-overlay">
+            <div><strong>📊 Parâmetros em Tempo Real:</strong></div>
+            <div>Eixo X (Horizontal): <span id="xValue">0</span> → Nota: <span id="noteValue">-</span></div>
+            <div>Eixo Y (Vertical): <span id="yValue">0</span> → Subdivisão: <span id="rhythmValue">-</span></div>
+            <div>Eixo Z (Profundidade): <span id="zValue">50</span>% → Volume: <span id="volumeValue">-</span></div>
+            <div>Escala: <span id="scaleValue">Dó Maior</span></div>
+        </div>
+
+        <div class="instructions">
+            <strong>🎮 Controlo Simulado:</strong><br>
+            Eixo X (Horizontal) = MouseX | Eixo Y (Vertical) = MouseY | Eixo Z (Profundidade) = Teclas 1-9
+        </div>
+    </div>
+
+    <script>
+        // Web Audio API Setup
+        let audioContext;
+        let oscillator;
+        let gainNode;
+        let isPlaying = false;
+        let currentFrequency = 440;
+        let targetFrequency = 440;
+
+        // Canvas Setup
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        function resizeCanvas() {
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        // Musical Scales (frequencies in Hz for notes C3 to C5)
+        const scales = {
+            major: [130.81, 146.83, 164.81, 174.61, 196.00, 220.00, 246.94, 261.63, 293.66, 329.63, 349.23, 392.00, 440.00, 493.88, 523.25],
+            minor: [130.81, 146.83, 155.56, 174.61, 196.00, 207.65, 233.08, 261.63, 293.66, 311.13, 349.23, 392.00, 415.30, 466.16, 523.25],
+            pentatonic: [130.81, 146.83, 164.81, 196.00, 220.00, 261.63, 293.66, 329.63, 392.00, 440.00, 523.25],
+            blues: [130.81, 155.56, 174.61, 185.00, 196.00, 233.08, 261.63, 311.13, 349.23, 369.99, 392.00, 466.16, 523.25],
+            chromatic: [130.81, 138.59, 146.83, 155.56, 164.81, 174.61, 185.00, 196.00, 207.65, 220.00, 233.08, 246.94, 261.63, 277.18, 293.66, 311.13, 329.63, 349.23, 369.99, 392.00, 415.30, 440.00, 466.16, 493.88, 523.25]
+        };
+
+        const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+
+        // State
+        let mouseX = 0;
+        let mouseY = 0;
+        let depth = 50; // 0-100%
+        let currentScale = 'major';
+        let currentWaveform = 'sine';
+
+        // Start Audio
+        document.getElementById('startButton').addEventListener('click', function() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                oscillator = audioContext.createOscillator();
+                gainNode = audioContext.createGain();
+                
+                oscillator.type = currentWaveform;
+                oscillator.frequency.value = 440;
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                gainNode.gain.value = 0;
+                oscillator.start();
+                
+                isPlaying = true;
+                this.textContent = '⏸ Parar Áudio';
+                this.style.background = '#f44336';
+            } else {
+                if (isPlaying) {
+                    gainNode.gain.value = 0;
+                    this.textContent = '▶ Continuar';
+                    this.style.background = '#4CAF50';
+                } else {
+                    this.textContent = '⏸ Parar Áudio';
+                    this.style.background = '#f44336';
+                }
+                isPlaying = !isPlaying;
+            }
+        });
+
+        // Scale Selection
+        document.getElementById('scaleSelect').addEventListener('change', function(e) {
+            currentScale = e.target.value;
+            document.getElementById('scaleValue').textContent = e.target.options[e.target.selectedIndex].text;
+        });
+
+        // Waveform Selection
+        document.getElementById('waveformSelect').addEventListener('change', function(e) {
+            currentWaveform = e.target.value;
+            if (oscillator) {
+                oscillator.type = currentWaveform;
+            }
+        });
+
+        // Mouse Tracking
+        canvas.addEventListener('mousemove', function(e) {
+            const rect = canvas.getBoundingClientRect();
+            mouseX = e.clientX - rect.left;
+            mouseY = e.clientY - rect.top;
+        });
+
+        // Keyboard for Depth (Z-axis)
+        document.addEventListener('keydown', function(e) {
+            if (e.key >= '1' && e.key <= '9') {
+                depth = parseInt(e.key) * 11.11; // Maps 1-9 to ~11-100%
+            } else if (e.key === '0') {
+                depth = 5; // Minimum
+            }
+        });
+
+        // Get closest note in scale
+        function getClosestNoteInScale(normalizedX) {
+            const scaleNotes = scales[currentScale];
+            const index = Math.floor(normalizedX * (scaleNotes.length - 1));
+            return scaleNotes[Math.max(0, Math.min(index, scaleNotes.length - 1))];
+        }
+
+        // Get note name from frequency
+        function getNoteName(frequency) {
+            const c0 = 16.35;
+            const halfSteps = 12 * Math.log2(frequency / c0);
+            const octave = Math.floor(halfSteps / 12);
+            const note = Math.round(halfSteps % 12);
+            return noteNames[note] + octave;
+        }
+
+        // Animation Loop
+        function animate() {
+            // Clear canvas
+            ctx.fillStyle = 'rgba(102, 126, 234, 0.1)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            if (canvas.width > 0) {
+                // Calculate parameters
+                const normalizedX = mouseX / canvas.width;
+                const normalizedY = 1 - (mouseY / canvas.height);
+                
+                // Eixo X: Pitch
+                targetFrequency = getClosestNoteInScale(normalizedX);
+                
+                // Smooth frequency transition
+                currentFrequency += (targetFrequency - currentFrequency) * 0.1;
+                
+                // Eixo Y: Rhythm subdivision (visual only for now)
+                const rhythmDiv = Math.floor(normalizedY * 8) + 1;
+                
+                // Eixo Z: Volume
+                const volume = depth / 100;
+                
+                // Update audio
+                if (oscillator && isPlaying) {
+                    oscillator.frequency.setTargetAtTime(currentFrequency, audioContext.currentTime, 0.01);
+                    gainNode.gain.setTargetAtTime(volume * 0.3, audioContext.currentTime, 0.01);
+                }
+                
+                // Update UI
+                document.getElementById('xValue').textContent = Math.round(normalizedX * 100) + '%';
+                document.getElementById('yValue').textContent = Math.round(normalizedY * 100) + '%';
+                document.getElementById('zValue').textContent = Math.round(depth) + '%';
+                document.getElementById('noteValue').textContent = getNoteName(currentFrequency);
+                document.getElementById('rhythmValue').textContent = '1/' + rhythmDiv;
+                document.getElementById('volumeValue').textContent = Math.round(volume * 100) + '%';
+                
+                // Visual feedback - circle size based on volume
+                const circleSize = 50 + (volume * 150);
+                ctx.beginPath();
+                ctx.arc(mouseX, mouseY, circleSize, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(255, 255, 255, ${volume * 0.3})`;
+                ctx.fill();
+                
+                // Inner circle
+                ctx.beginPath();
+                ctx.arc(mouseX, mouseY, circleSize * 0.5, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(76, 175, 80, ${volume * 0.5})`;
+                ctx.fill();
+                
+                // Note label
+                ctx.fillStyle = 'white';
+                ctx.font = 'bold 24px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText(getNoteName(currentFrequency), mouseX, mouseY + 8);
+            }
+            
+            requestAnimationFrame(animate);
+        }
+
+        animate();
+    </script>
+</body>
+</html>
