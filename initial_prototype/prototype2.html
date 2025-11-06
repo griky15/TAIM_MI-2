@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simulador Leap Motion - Instrumento Gestual</title>
+    <title>Leap Motion Simulator - Gestural Instrument</title>
     <style>
         * {
             margin: 0;
@@ -61,6 +61,7 @@
             font-size: 14px;
             cursor: pointer;
             background: rgba(255,255,255,0.9);
+            transition: all 0.2s ease;
         }
 
         button {
@@ -100,6 +101,7 @@
             font-family: monospace;
             font-size: 14px;
             line-height: 1.6;
+            pointer-events: none;
         }
 
         .info-overlay div {
@@ -114,6 +116,7 @@
             padding: 15px;
             border-radius: 10px;
             text-align: center;
+            pointer-events: none;
         }
 
         .beat-dots {
@@ -149,6 +152,7 @@
             display: none;
             opacity: 0;
             transition: opacity 0.3s ease;
+            pointer-events: none;
         }
 
         .instructions.show {
@@ -206,35 +210,35 @@
 </head>
 <body>
     <div class="header">
-        <h1>🎵Simulador de Instrumento Gestual</h1>
+        <h1>🎵Gestural Instrument Simulator</h1>
 
     </div>
 
     <div class="controls">
         <div class="control-group">
-            <label>Escala Musical:</label>
+            <label>Musical Scale:</label>
             <select id="scaleSelect">
-                <option value="major">Dó Maior</option>
-                <option value="minor">Dó Menor</option>
-                <option value="pentatonic">Pentatónica</option>
+                <option value="major">C Major</option>
+                <option value="minor">C Minor</option>
+                <option value="pentatonic">Pentatonic</option>
                 <option value="blues">Blues</option>
-                <option value="chromatic">Cromática</option>
+                <option value="chromatic">Chromatic</option>
             </select>
         </div>
 
         <div class="control-group">
-            <label>Forma de Onda:</label>
-            <select id="waveformSelect">
-                <option value="sine">Sine (Suave)</option>
-                <option value="triangle">Triangle (Médio)</option>
-                <option value="sawtooth">Sawtooth (Brilhante)</option>
-                <option value="square">Square (8-bit)</option>
+            <label>Instrument:</label>
+            <select id="instrumentSelect">
+                <option value="sine">Synth</option>
+                <option value="guitar">Guitar</option>
+                <option value="saxophone">Saxophone</option>
+                <option value="piano">Piano</option>
             </select>
         </div>
 
         <div class="control-group">
-            <label>Controlo:</label>
-            <button id="startButton">▶ Iniciar Áudio</button>
+            <label>Control:</label>
+            <button id="startButton">▶ Start Audio</button>
         </div>
     </div>
 
@@ -242,16 +246,16 @@
         <canvas id="canvas"></canvas>
         
         <div class="info-overlay">
-            <div><strong>📊 Parâmetros em Tempo Real:</strong></div>
-            <div>Eixo X (Horizontal): <span id="xValue">0</span> → Nota: <span id="noteValue">-</span></div>
-            <div>Eixo Y (Vertical): <span id="yValue">0</span> → Subdivisão: <span id="rhythmValue">-</span></div>
-            <div>Eixo Z (Profundidade): <span id="zValue">50</span>% → Volume: <span id="volumeValue">-</span></div>
-            <div>Escala: <span id="scaleValue">Dó Maior</span></div>
+            <div><strong>📊 Real-Time Parameters:</strong></div>
+            <div>X Axis (Horizontal): <span id="xValue">0</span> → Note: <span id="noteValue">-</span></div>
+            <div>Y Axis (Vertical): <span id="yValue">0</span> → Subdivision: <span id="rhythmValue">-</span></div>
+            <div>Z Axis (Depth): <span id="zValue">50</span>% → Volume: <span id="volumeValue">-</span></div>
+            <div>Scale: <span id="scaleValue">C Major</span></div>
             <div>BPM: <span id="bpmValue">120</span></div>
         </div>
 
         <div class="rhythm-indicator">
-            <div><strong>🥁 Ritmo Ativo</strong></div>
+            <div><strong>🥁 Active Rhythm</strong></div>
             <div id="rhythmText" style="font-size: 20px; margin: 10px 0;">1/4</div>
             <div class="beat-dots" id="beatDots">
                 <div class="beat-dot"></div>
@@ -264,9 +268,13 @@
         <button class="info-button" id="infoButton">i</button>
 
         <div class="instructions" id="instructions">
-            <strong>🎮 Controlo Simulado:</strong><br>
-            Eixo X (Horizontal) = MouseX | Eixo Y (Vertical) = MouseY | Eixo Z (Profundidade) = Teclas 1-9<br>
-            <strong>EIXO Y controla agora a velocidade das notas!</strong>
+            <strong>🎮 Simulated Control:</strong><br>
+            <strong>X Axis (Horizontal):</strong> MouseX changes the note<br>
+            <strong>Y Axis (Vertical):</strong> MouseY controls note speed<br>
+            <strong>Z Axis (Depth):</strong> Mouse wheel 🖱️ controls volume<br>
+            <strong>Scales:</strong> Keys 1-5 (1=Major, 2=Minor, 3=Pentatonic, 4=Blues, 5=Chromatic)<br>
+            <strong>Instruments:</strong> Arrows ← → (Synth → Guitar → Saxophone → Piano)<br>
+            <strong>BPM:</strong> Arrows ↑ ↓ (±5 BPM)
         </div>
     </div>
 
@@ -306,6 +314,7 @@
         };
 
         const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+        const noteNamesPT = ['Dó', 'Dó#', 'Ré', 'Ré#', 'Mi', 'Fá', 'Fá#', 'Sol', 'Sol#', 'Lá', 'Lá#', 'Si'];
 
         // Rhythm timing
         const baseBPM = 120;
@@ -328,15 +337,15 @@
             if (!audioContext) {
                 audioContext = new (window.AudioContext || window.webkitAudioContext)();
                 isPlaying = true;
-                this.textContent = '⏸ Parar Áudio';
+                this.textContent = '⏸ Stop Audio';
                 this.style.background = '#f44336';
             } else {
                 isPlaying = !isPlaying;
                 if (isPlaying) {
-                    this.textContent = '⏸ Parar Áudio';
+                    this.textContent = '⏸ Stop Audio';
                     this.style.background = '#f44336';
                 } else {
-                    this.textContent = '▶ Continuar';
+                    this.textContent = '▶ Continue';
                     this.style.background = '#4CAF50';
                 }
             }
@@ -348,9 +357,11 @@
             document.getElementById('scaleValue').textContent = e.target.options[e.target.selectedIndex].text;
         });
 
-        // Waveform Selection
-        document.getElementById('waveformSelect').addEventListener('change', function(e) {
+        // Instrument Selection
+        document.getElementById('instrumentSelect').addEventListener('change', function(e) {
             currentWaveform = e.target.value;
+            // Update index to match manual selection
+            currentInstrumentIndex = instruments.findIndex(inst => inst.value === e.target.value);
         });
 
         // Mouse Tracking
@@ -360,12 +371,109 @@
             mouseY = e.clientY - rect.top;
         });
 
-        // Keyboard for Depth (Z-axis)
+        // Mouse Wheel for Depth (Z-axis) control
+        canvas.addEventListener('wheel', function(e) {
+            e.preventDefault(); // Prevent page scrolling
+            
+            // Scroll up increases depth, scroll down decreases
+            const delta = e.deltaY > 0 ? -5 : 5;
+            depth = Math.max(0, Math.min(100, depth + delta));
+        });
+
+        // Keyboard for Depth (Z-axis) and Scale Selection
+        const scaleMapping = {
+            '1': { value: 'major', text: 'C Major' },
+            '2': { value: 'minor', text: 'C Minor' },
+            '3': { value: 'pentatonic', text: 'Pentatonic' },
+            '4': { value: 'blues', text: 'Blues' },
+            '5': { value: 'chromatic', text: 'Chromatic' }
+        };
+
+        // Instrument mapping for arrow keys
+        const instruments = [
+            { value: 'sine', text: 'Synth (Smooth)' },
+            { value: 'guitar', text: 'Guitar' },
+            { value: 'saxophone', text: 'Saxophone' },
+            { value: 'piano', text: 'Piano' }
+        ];
+        let currentInstrumentIndex = 0;
+
+        function changeInstrument(direction) {
+            currentInstrumentIndex += direction;
+            
+            // Wrap around
+            if (currentInstrumentIndex < 0) {
+                currentInstrumentIndex = instruments.length - 1;
+            } else if (currentInstrumentIndex >= instruments.length) {
+                currentInstrumentIndex = 0;
+            }
+            
+            const instrument = instruments[currentInstrumentIndex];
+            
+            // Update waveform
+            currentWaveform = instrument.value;
+            
+            // Update select dropdown
+            document.getElementById('instrumentSelect').value = instrument.value;
+            
+            // Visual feedback (flash the instrument selector)
+            const instrumentSelect = document.getElementById('instrumentSelect');
+            instrumentSelect.style.background = '#4CAF50';
+            instrumentSelect.style.color = 'white';
+            setTimeout(() => {
+                instrumentSelect.style.background = 'rgba(255,255,255,0.9)';
+                instrumentSelect.style.color = '#222';
+            }, 200);
+        }
+
+        function updateBPMDisplay() {
+            document.getElementById('bpmValue').textContent = currentBPM;
+            
+            // Update note interval based on BPM
+            const beatDuration = (60 / currentBPM) * 1000;
+            noteInterval = beatDuration / 4;
+        }
+
         document.addEventListener('keydown', function(e) {
-            if (e.key >= '1' && e.key <= '9') {
-                depth = parseInt(e.key) * 11.11;
-            } else if (e.key === '0') {
-                depth = 5;
+            // Arrow keys for instrument selection (left/right)
+            if (e.key === 'ArrowLeft') {
+                changeInstrument(-1);
+                e.preventDefault();
+            } else if (e.key === 'ArrowRight') {
+                changeInstrument(1);
+                e.preventDefault();
+            }
+            // Arrow keys for BPM control (up/down)
+            else if (e.key === 'ArrowUp') {
+                currentBPM = Math.min(200, currentBPM + 5);
+                updateBPMDisplay();
+                e.preventDefault();
+            } else if (e.key === 'ArrowDown') {
+                currentBPM = Math.max(40, currentBPM - 5);
+                updateBPMDisplay();
+                e.preventDefault();
+            }
+            // Check if key 1-5 is pressed for scale selection
+            else if (scaleMapping[e.key]) {
+                const scale = scaleMapping[e.key];
+                
+                // Update scale
+                currentScale = scale.value;
+                
+                // Update select dropdown
+                document.getElementById('scaleSelect').value = scale.value;
+                
+                // Update UI display
+                document.getElementById('scaleValue').textContent = scale.text;
+                
+                // Visual feedback (flash the scale selector)
+                const scaleSelect = document.getElementById('scaleSelect');
+                scaleSelect.style.background = '#4CAF50';
+                scaleSelect.style.color = 'white';
+                setTimeout(() => {
+                    scaleSelect.style.background = 'rgba(255,255,255,0.9)';
+                    scaleSelect.style.color = '#222';
+                }, 200);
             }
         });
 
@@ -382,37 +490,222 @@
             const halfSteps = 12 * Math.log2(frequency / c0);
             const octave = Math.floor(halfSteps / 12);
             const note = Math.round(halfSteps % 12);
-            return noteNames[note] + octave;
+            return noteNamesPT[note] + octave;
         }
 
-        // Play a note with envelope (ADSR)
+        // Play a note with envelope (ADSR) - Suporta diferentes instrumentos
         function playNote(frequency, duration, volume) {
             if (!audioContext) return;
 
-            const osc = audioContext.createOscillator();
-            const gainNode = audioContext.createGain();
-            
-            osc.type = currentWaveform;
-            osc.frequency.value = frequency;
-            
-            osc.connect(gainNode);
-            gainNode.connect(audioContext.destination);
-            
             const now = audioContext.currentTime;
-            const attackTime = 0.02;
-            const releaseTime = 0.1;
-            const sustainTime = Math.max(0.05, duration - attackTime - releaseTime);
             
-            // ADSR Envelope
-            gainNode.gain.setValueAtTime(0, now);
-            gainNode.gain.linearRampToValueAtTime(volume * 0.4, now + attackTime);
-            gainNode.gain.setValueAtTime(volume * 0.4, now + attackTime + sustainTime);
-            gainNode.gain.linearRampToValueAtTime(0, now + attackTime + sustainTime + releaseTime);
-            
-            osc.start(now);
-            osc.stop(now + attackTime + sustainTime + releaseTime);
-            
-            return { osc, gainNode };
+            // Diferentes configurações por instrumento
+            if (currentWaveform === 'sine') {
+                // Synth - Som puro e suave (sintetizador)
+                const osc = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                osc.type = 'sine';
+                osc.frequency.value = frequency;
+                
+                osc.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                const attackTime = 0.02;
+                const releaseTime = 0.1;
+                const sustainTime = Math.max(0.05, duration - attackTime - releaseTime);
+                
+                gainNode.gain.setValueAtTime(0, now);
+                gainNode.gain.linearRampToValueAtTime(volume * 0.4, now + attackTime);
+                gainNode.gain.setValueAtTime(volume * 0.4, now + attackTime + sustainTime);
+                gainNode.gain.linearRampToValueAtTime(0, now + attackTime + sustainTime + releaseTime);
+                
+                osc.start(now);
+                osc.stop(now + attackTime + sustainTime + releaseTime);
+                
+                return { osc, gainNode };
+            }
+            else if (currentWaveform === 'guitar') {
+                // Guitarra - Som mais realista com pluck e harmônicos
+                const osc1 = audioContext.createOscillator();
+                const osc2 = audioContext.createOscillator();
+                const osc3 = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                const gain2 = audioContext.createGain();
+                const gain3 = audioContext.createGain();
+                const filter = audioContext.createBiquadFilter();
+                
+                // Fundamental + harmônicos para simular corda
+                osc1.type = 'triangle';
+                osc1.frequency.value = frequency;
+                
+                osc2.type = 'triangle';
+                osc2.frequency.value = frequency * 2.01; // Ligeiramente desafinado para realismo
+                
+                osc3.type = 'sawtooth';
+                osc3.frequency.value = frequency * 0.5; // Sub-harmônico
+                
+                // Filtro passa-baixo para simular corpo da guitarra
+                filter.type = 'lowpass';
+                filter.frequency.value = 3000;
+                filter.Q.value = 1;
+                
+                gain2.gain.value = 0.4;
+                gain3.gain.value = 0.2;
+                
+                osc1.connect(gainNode);
+                osc2.connect(gain2);
+                osc3.connect(gain3);
+                gain2.connect(gainNode);
+                gain3.connect(gainNode);
+                gainNode.connect(filter);
+                filter.connect(audioContext.destination);
+                
+                // Envelope tipo "pluck" - ataque rápido, decay rápido, release longo
+                const attackTime = 0.003;
+                const decayTime = 0.05;
+                const releaseTime = 0.8;
+                const sustainTime = Math.max(0.05, duration - attackTime - decayTime - releaseTime);
+                
+                gainNode.gain.setValueAtTime(0, now);
+                gainNode.gain.linearRampToValueAtTime(volume * 0.7, now + attackTime);
+                gainNode.gain.exponentialRampToValueAtTime(volume * 0.2, now + attackTime + decayTime);
+                gainNode.gain.exponentialRampToValueAtTime(volume * 0.15, now + attackTime + decayTime + sustainTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.001, now + attackTime + decayTime + sustainTime + releaseTime);
+                
+                // Modulação do filtro para simular "twang"
+                filter.frequency.setValueAtTime(5000, now);
+                filter.frequency.exponentialRampToValueAtTime(2500, now + 0.05);
+                filter.frequency.exponentialRampToValueAtTime(2000, now + 0.2);
+                
+                osc1.start(now);
+                osc2.start(now);
+                osc3.start(now);
+                osc1.stop(now + attackTime + decayTime + sustainTime + releaseTime);
+                osc2.stop(now + attackTime + decayTime + sustainTime + releaseTime);
+                osc3.stop(now + attackTime + decayTime + sustainTime + releaseTime);
+                
+                return { osc: osc1, gainNode };
+            }
+            else if (currentWaveform === 'saxophone') {
+                // Saxofone - Som mais realista com mais harmônicos e vibrato
+                const osc1 = audioContext.createOscillator();
+                const osc2 = audioContext.createOscillator();
+                const osc3 = audioContext.createOscillator();
+                const vibrato = audioContext.createOscillator();
+                const vibratoGain = audioContext.createGain();
+                const gainNode = audioContext.createGain();
+                const gain2 = audioContext.createGain();
+                const gain3 = audioContext.createGain();
+                const filter = audioContext.createBiquadFilter();
+                
+                // Fundamental + harmônicos ímpares (característico de instrumentos de palheta)
+                osc1.type = 'sawtooth';
+                osc1.frequency.value = frequency;
+                
+                osc2.type = 'square';
+                osc2.frequency.value = frequency * 3; // 3º harmônico
+                
+                osc3.type = 'sine';
+                osc3.frequency.value = frequency * 5; // 5º harmônico
+                
+                // Vibrato mais suave e natural
+                vibrato.frequency.value = 4.5;
+                vibratoGain.gain.value = 8;
+                
+                vibrato.connect(vibratoGain);
+                vibratoGain.connect(osc1.frequency);
+                
+                // Filtro para simular timbre de saxofone
+                filter.type = 'bandpass';
+                filter.frequency.value = 800 + (frequency * 0.8);
+                filter.Q.value = 3;
+                
+                gain2.gain.value = 0.15;
+                gain3.gain.value = 0.08;
+                
+                osc1.connect(filter);
+                osc2.connect(gain2);
+                osc3.connect(gain3);
+                gain2.connect(filter);
+                gain3.connect(filter);
+                filter.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                // Envelope típico de sopro - attack gradual, sustain constante
+                const attackTime = 0.12;
+                const releaseTime = 0.2;
+                const sustainTime = Math.max(0.15, duration - attackTime - releaseTime);
+                
+                gainNode.gain.setValueAtTime(0, now);
+                gainNode.gain.linearRampToValueAtTime(volume * 0.15, now + attackTime * 0.3);
+                gainNode.gain.linearRampToValueAtTime(volume * 0.45, now + attackTime);
+                gainNode.gain.setValueAtTime(volume * 0.45, now + attackTime + sustainTime);
+                gainNode.gain.linearRampToValueAtTime(0, now + attackTime + sustainTime + releaseTime);
+                
+                // Vibrato cresce gradualmente (mais natural)
+                vibratoGain.gain.setValueAtTime(0, now);
+                vibratoGain.gain.linearRampToValueAtTime(8, now + attackTime + sustainTime * 0.3);
+                
+                osc1.start(now);
+                osc2.start(now);
+                osc3.start(now);
+                vibrato.start(now);
+                osc1.stop(now + attackTime + sustainTime + releaseTime);
+                osc2.stop(now + attackTime + sustainTime + releaseTime);
+                osc3.stop(now + attackTime + sustainTime + releaseTime);
+                vibrato.stop(now + attackTime + sustainTime + releaseTime);
+                
+                return { osc: osc1, gainNode };
+            }
+            else if (currentWaveform === 'piano') {
+                // Piano - Múltiplas ondas (fundamental + harmónicos)
+                const osc1 = audioContext.createOscillator();
+                const osc2 = audioContext.createOscillator();
+                const osc3 = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                const gain2 = audioContext.createGain();
+                const gain3 = audioContext.createGain();
+                
+                osc1.type = 'sine';
+                osc1.frequency.value = frequency;
+                
+                osc2.type = 'sine';
+                osc2.frequency.value = frequency * 2;
+                
+                osc3.type = 'sine';
+                osc3.frequency.value = frequency * 3;
+                
+                gain2.gain.value = 0.3;
+                gain3.gain.value = 0.15;
+                
+                osc1.connect(gainNode);
+                osc2.connect(gain2);
+                osc3.connect(gain3);
+                gain2.connect(gainNode);
+                gain3.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                const attackTime = 0.005;
+                const decayTime = 0.1;
+                const releaseTime = 0.4;
+                const sustainTime = Math.max(0.05, duration - attackTime - decayTime - releaseTime);
+                
+                gainNode.gain.setValueAtTime(0, now);
+                gainNode.gain.linearRampToValueAtTime(volume * 0.6, now + attackTime);
+                gainNode.gain.exponentialRampToValueAtTime(volume * 0.3, now + attackTime + decayTime);
+                gainNode.gain.setValueAtTime(volume * 0.3, now + attackTime + decayTime + sustainTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.001, now + attackTime + decayTime + sustainTime + releaseTime);
+                
+                osc1.start(now);
+                osc2.start(now);
+                osc3.start(now);
+                osc1.stop(now + attackTime + decayTime + sustainTime + releaseTime);
+                osc2.stop(now + attackTime + decayTime + sustainTime + releaseTime);
+                osc3.stop(now + attackTime + decayTime + sustainTime + releaseTime);
+                
+                return { osc: osc1, gainNode };
+            }
         }
 
         // Update beat indicators
