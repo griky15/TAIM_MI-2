@@ -13,17 +13,19 @@
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            /* Fundo verde ciano suave */
+            background: #A8E6CF;
             height: 100vh;
             display: flex;
             flex-direction: column;
-            color: white;
+            /* Texto escuro para contraste */
+            color: #222;
             overflow: hidden;
         }
 
         .header {
             padding: 20px;
-            background: rgba(0,0,0,0.3);
+            background: rgba(255,255,255,0.4);
             text-align: center;
         }
 
@@ -34,7 +36,7 @@
 
         .controls {
             padding: 15px;
-            background: rgba(0,0,0,0.2);
+            background: rgba(255,255,255,0.3);
             display: flex;
             gap: 20px;
             justify-content: center;
@@ -92,7 +94,7 @@
             position: absolute;
             top: 20px;
             left: 20px;
-            background: rgba(0,0,0,0.7);
+            background: rgba(255,255,255,0.5);
             padding: 15px;
             border-radius: 10px;
             font-family: monospace;
@@ -108,7 +110,7 @@
             position: absolute;
             top: 20px;
             right: 20px;
-            background: rgba(0,0,0,0.7);
+            background: rgba(255,255,255,0.5);
             padding: 15px;
             border-radius: 10px;
             text-align: center;
@@ -139,11 +141,45 @@
             bottom: 20px;
             left: 50%;
             transform: translateX(-50%);
-            background: rgba(0,0,0,0.7);
+            background: rgba(255,255,255,0.5);
             padding: 15px 30px;
             border-radius: 10px;
             text-align: center;
             font-size: 14px;
+            display: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .instructions.show {
+            display: block;
+            opacity: 1;
+        }
+
+        .info-button {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.5);
+            color: #222;
+            border: 2px solid rgba(255,255,255,0.3);
+            font-size: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            z-index: 100;
+        }
+
+        .info-button:hover {
+            background: rgba(255,255,255,0.8);
+            border-color: rgba(255,255,255,0.6);
+            transform: scale(1.1);
         }
 
         .visual-indicator {
@@ -157,7 +193,7 @@
 
         .note-label {
             position: absolute;
-            background: rgba(0,0,0,0.8);
+            background: rgba(255,255,255,0.6);
             color: #4CAF50;
             padding: 5px 10px;
             border-radius: 5px;
@@ -170,8 +206,8 @@
 </head>
 <body>
     <div class="header">
-        <h1>🎵 Simulador de Instrumento Gestual (Protótipo Leap Motion)</h1>
-        <p>Move o rato para simular os gestos das mãos no espaço 3D</p>
+        <h1>🎵Simulador de Instrumento Gestual</h1>
+
     </div>
 
     <div class="controls">
@@ -225,7 +261,9 @@
             </div>
         </div>
 
-        <div class="instructions">
+        <button class="info-button" id="infoButton">i</button>
+
+        <div class="instructions" id="instructions">
             <strong>🎮 Controlo Simulado:</strong><br>
             Eixo X (Horizontal) = MouseX | Eixo Y (Vertical) = MouseY | Eixo Z (Profundidade) = Teclas 1-9<br>
             <strong>EIXO Y controla agora a velocidade das notas!</strong>
@@ -233,6 +271,14 @@
     </div>
 
     <script>
+        // Info button toggle
+        const infoButton = document.getElementById('infoButton');
+        const instructions = document.getElementById('instructions');
+        
+        infoButton.addEventListener('click', function() {
+            instructions.classList.toggle('show');
+        });
+
         // Web Audio API Setup
         let audioContext;
         let isPlaying = false;
@@ -384,7 +430,7 @@
         // Animation Loop
         function animate(timestamp) {
             // Clear canvas
-            ctx.fillStyle = 'rgba(102, 126, 234, 0.1)';
+            ctx.fillStyle = 'rgba(168, 230, 207, 0.3)';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
             if (canvas.width > 0) {
