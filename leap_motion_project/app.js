@@ -112,6 +112,75 @@ recordButton.addEventListener('click', function() {
 });
 
 /**
+ * Keyboard shortcuts for scales (1-5)
+ */
+const scaleMapping = {
+    '1': { value: 'major', text: 'Dó Maior' },
+    '2': { value: 'minor', text: 'Dó Menor' },
+    '3': { value: 'pentatonic', text: 'Pentatónica' },
+    '4': { value: 'blues', text: 'Blues' },
+    '5': { value: 'chromatic', text: 'Cromática' }
+};
+
+document.addEventListener('keydown', function(e) {
+    // Check if key 1-5 is pressed
+    if (scaleMapping[e.key]) {
+        const scale = scaleMapping[e.key];
+        
+        // Update audio engine
+        audioEngine.setScale(scale.value);
+        
+        // Update select dropdown
+        scaleSelect.value = scale.value;
+        
+        // Update UI display
+        document.getElementById('scaleValue').textContent = scale.text;
+        
+        // Visual feedback (flash the scale selector)
+        scaleSelect.style.background = '#4CAF50';
+        scaleSelect.style.color = 'white';
+        setTimeout(() => {
+            scaleSelect.style.background = 'rgba(255,255,255,0.9)';
+            scaleSelect.style.color = '#222';
+        }, 200);
+    }
+    
+    // Arrow keys for BPM control
+    if (e.key === 'ArrowLeft') {
+        // Decrease BPM by 5
+        currentBPM = Math.max(60, currentBPM - 5);
+        updateBPM(currentBPM);
+        e.preventDefault(); // Prevent page scrolling
+    } else if (e.key === 'ArrowRight') {
+        // Increase BPM by 5
+        currentBPM = Math.min(180, currentBPM + 5);
+        updateBPM(currentBPM);
+        e.preventDefault(); // Prevent page scrolling
+    }
+});
+
+/**
+ * Update BPM value and UI
+ */
+function updateBPM(bpm) {
+    currentBPM = bpm;
+    bpmSlider.value = bpm;
+    bpmDisplay.textContent = bpm;
+    
+    // Update note interval based on BPM
+    const beatDuration = (60 / currentBPM) * 1000;
+    noteInterval = beatDuration / 4;
+    
+    // Visual feedback (flash the BPM display)
+    bpmDisplay.style.color = '#4CAF50';
+    bpmDisplay.style.transform = 'scale(1.2)';
+    setTimeout(() => {
+        bpmDisplay.style.color = '#4CAF50';
+        bpmDisplay.style.transform = 'scale(1)';
+    }, 200);
+}
+
+/**
  * Process Leap Motion frame data
  */
 function onLeapFrame(hands) {
