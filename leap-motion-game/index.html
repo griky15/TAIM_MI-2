@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leap Motion - Instrumento Musical Gestual</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="header">
+        <h1>🎵 Instrumento Musical Gestual - Leap Motion</h1>
+        <p>Use as suas mãos para criar música no espaço 3D</p>
+    </div>
+
+    <div class="controls">
+        <div class="control-group">
+            <label>Escala Musical:</label>
+            <select id="scaleSelect">
+                <option value="major">Dó Maior</option>
+                <option value="minor">Dó Menor</option>
+                <option value="pentatonic">Pentatónica</option>
+                <option value="blues">Blues</option>
+                <option value="chromatic">Cromática</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label>Forma de Onda:</label>
+            <select id="waveformSelect">
+                <option value="sine">Sine (Suave)</option>
+                <option value="triangle">Triangle (Médio)</option>
+                <option value="sawtooth">Sawtooth (Brilhante)</option>
+                <option value="square">Square (8-bit)</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label>BPM:</label>
+            <input type="range" id="bpmSlider" min="60" max="180" value="120">
+            <span id="bpmDisplay">120</span>
+        </div>
+
+        <div class="control-group">
+            <button id="startButton">▶ Iniciar Áudio</button>
+        </div>
+
+        <div class="control-group">
+            <button id="recordButton" disabled>⏺ Gravar</button>
+        </div>
+    </div>
+
+    <div class="main-area">
+        <canvas id="canvas"></canvas>
+        
+        <!-- Leap Motion Status -->
+        <div class="leap-status" id="leapStatus">
+            <div><strong>🔌 Leap Motion</strong></div>
+            <div id="connectionStatus">Desconectado</div>
+            <div id="handsDetected">Mãos: 0</div>
+        </div>
+
+        <!-- Real-time Parameters -->
+        <div class="info-overlay">
+            <div><strong>📊 Parâmetros em Tempo Real:</strong></div>
+            <div>Mão Esquerda (X): <span id="leftHandX">-</span> → Nota: <span id="leftNote">-</span></div>
+            <div>Mão Direita (X): <span id="rightHandX">-</span> → Nota: <span id="rightNote">-</span></div>
+            <div>Altura (Y): <span id="handY">-</span> → Subdivisão: <span id="rhythmValue">-</span></div>
+            <div>Profundidade (Z): <span id="handZ">-</span> → Volume: <span id="volumeValue">-</span></div>
+            <div>Escala: <span id="scaleValue">Dó Maior</span></div>
+        </div>
+
+        <!-- Rhythm Indicator -->
+        <div class="rhythm-indicator">
+            <div><strong>🥁 Ritmo Ativo</strong></div>
+            <div id="rhythmText" style="font-size: 20px; margin: 10px 0;">1/4</div>
+            <div class="beat-dots" id="beatDots">
+                <div class="beat-dot"></div>
+                <div class="beat-dot"></div>
+                <div class="beat-dot"></div>
+                <div class="beat-dot"></div>
+            </div>
+        </div>
+
+        <!-- Info Button -->
+        <button class="info-button" id="infoButton">i</button>
+
+        <!-- Instructions -->
+        <div class="instructions" id="instructions">
+            <strong>🎮 Como Usar:</strong><br>
+            <strong>Eixo X (Horizontal):</strong> Move as mãos horizontalmente para mudar a nota<br>
+            <strong>Eixo Y (Vertical):</strong> Altura da mão controla a velocidade das notas<br>
+            <strong>Eixo Z (Profundidade):</strong> Aproximar/afastar controla o volume<br>
+            <strong>Duas Mãos:</strong> Toca duas notas simultaneamente (harmonia)
+        </div>
+    </div>
+
+    <!-- Leap Motion Library -->
+    <script src="https://js.leapmotion.com/leap-1.1.1.min.js"></script>
+    
+    <!-- Application Scripts -->
+    <script src="audio-engine.js"></script>
+    <script src="leap-controller.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
