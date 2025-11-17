@@ -237,6 +237,15 @@
         </div>
 
         <div class="control-group">
+            <label>Octave:</label>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <button id="octaveDown" style="width: 40px; padding: 8px;">-</button>
+                <span id="octaveValue" style="font-weight: bold; min-width: 80px; text-align: center;">C3-C5</span>
+                <button id="octaveUp" style="width: 40px; padding: 8px;">+</button>
+            </div>
+        </div>
+
+        <div class="control-group">
             <label>Control:</label>
             <button id="startButton">▶ Start Audio</button>
         </div>
@@ -273,8 +282,9 @@
             <strong>Y Axis (Vertical):</strong> MouseY controls note speed<br>
             <strong>Z Axis (Depth):</strong> Mouse wheel 🖱️ controls volume<br>
             <strong>Scales:</strong> Keys 1-5 (1=Major, 2=Minor, 3=Pentatonic, 4=Blues, 5=Chromatic)<br>
+            <strong>Octaves:</strong> Keys + / - (Shift octave range up/down)<br>
             <strong>Instruments:</strong> Arrows ← → (Synth → Guitar → Saxophone → Piano)<br>
-            <strong>BPM:</strong> Arrows ↑ ↓ (±5 BPM)
+            <strong>BPM:</strong> Arrows ↑ ↓ (±10 BPM, range 40-300)
         </div>
     </div>
 
@@ -304,14 +314,33 @@
         resizeCanvas();
         window.addEventListener('resize', resizeCanvas);
 
-        // Musical Scales (frequencies in Hz for notes C3 to C5)
-        const scales = {
+        // Musical Scales (base frequencies in Hz - starting from C3)
+        // C3 to C7 (4 octaves total, each octave = *2 frequency)
+        const baseScales = {
             major: [130.81, 146.83, 164.81, 174.61, 196.00, 220.00, 246.94, 261.63, 293.66, 329.63, 349.23, 392.00, 440.00, 493.88, 523.25],
             minor: [130.81, 146.83, 155.56, 174.61, 196.00, 207.65, 233.08, 261.63, 293.66, 311.13, 349.23, 392.00, 415.30, 466.16, 523.25],
             pentatonic: [130.81, 146.83, 164.81, 196.00, 220.00, 261.63, 293.66, 329.63, 392.00, 440.00, 523.25],
             blues: [130.81, 155.56, 174.61, 185.00, 196.00, 233.08, 261.63, 311.13, 349.23, 369.99, 392.00, 466.16, 523.25],
             chromatic: [130.81, 138.59, 146.83, 155.56, 164.81, 174.61, 185.00, 196.00, 207.65, 220.00, 233.08, 246.94, 261.63, 277.18, 293.66, 311.13, 329.63, 349.23, 369.99, 392.00, 415.30, 440.00, 466.16, 493.88, 523.25]
         };
+
+        // Current octave offset (0 = C3-C5, 1 = C5-C7)
+        let currentOctaveOffset = 0;
+        
+        // Generate scales with current octave offset
+        function getScalesWithOctave() {
+            const scales = {};
+            // Multiplier: 0 = x1 (C3-C5), 1 = x4 (C5-C7 = 2 octaves up)
+            const multiplier = currentOctaveOffset === 0 ? 1 : 4;
+            
+            for (const [key, frequencies] of Object.entries(baseScales)) {
+                scales[key] = frequencies.map(freq => freq * multiplier);
+            }
+            
+            return scales;
+        }
+        
+        let scales = getScalesWithOctave();
 
         const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
         const noteNamesPT = ['Dó', 'Dó#', 'Ré', 'Ré#', 'Mi', 'Fá', 'Fá#', 'Sol', 'Sol#', 'Lá', 'Lá#', 'Si'];
@@ -362,6 +391,28 @@
             currentWaveform = e.target.value;
             // Update index to match manual selection
             currentInstrumentIndex = instruments.findIndex(inst => inst.value === e.target.value);
+        });
+
+        // Octave Control
+        function updateOctaveDisplay() {
+            const ranges = ['C3-C5', 'C5-C7'];
+            document.getElementById('octaveValue').textContent = ranges[currentOctaveOffset];
+        }
+
+        document.getElementById('octaveUp').addEventListener('click', function() {
+            if (currentOctaveOffset < 1) { // Max C5-C7
+                currentOctaveOffset++;
+                scales = getScalesWithOctave();
+                updateOctaveDisplay();
+            }
+        });
+
+        document.getElementById('octaveDown').addEventListener('click', function() {
+            if (currentOctaveOffset > 0) { // Min C3-C5
+                currentOctaveOffset--;
+                scales = getScalesWithOctave();
+                updateOctaveDisplay();
+            }
         });
 
         // Mouse Tracking
@@ -428,15 +479,28 @@
 
         function updateBPMDisplay() {
             document.getElementById('bpmValue').textContent = currentBPM;
-            
-            // Update note interval based on BPM
-            const beatDuration = (60 / currentBPM) * 1000;
-            noteInterval = beatDuration / 4;
+            // Note: noteInterval is recalculated in the animation loop based on currentBPM and subdivision
         }
 
         document.addEventListener('keydown', function(e) {
+            // Octave controls (+ and -)
+            if (e.key === '+' || e.key === '=') {
+                if (currentOctaveOffset < 1) {
+                    currentOctaveOffset++;
+                    scales = getScalesWithOctave();
+                    updateOctaveDisplay();
+                }
+                e.preventDefault();
+            } else if (e.key === '-' || e.key === '_') {
+                if (currentOctaveOffset > 0) { // Min C3-C5
+                    currentOctaveOffset--;
+                    scales = getScalesWithOctave();
+                    updateOctaveDisplay();
+                }
+                e.preventDefault();
+            }
             // Arrow keys for instrument selection (left/right)
-            if (e.key === 'ArrowLeft') {
+            else if (e.key === 'ArrowLeft') {
                 changeInstrument(-1);
                 e.preventDefault();
             } else if (e.key === 'ArrowRight') {
@@ -445,11 +509,11 @@
             }
             // Arrow keys for BPM control (up/down)
             else if (e.key === 'ArrowUp') {
-                currentBPM = Math.min(200, currentBPM + 5);
+                currentBPM = Math.min(300, currentBPM + 10);
                 updateBPMDisplay();
                 e.preventDefault();
             } else if (e.key === 'ArrowDown') {
-                currentBPM = Math.max(40, currentBPM - 5);
+                currentBPM = Math.max(40, currentBPM - 10);
                 updateBPMDisplay();
                 e.preventDefault();
             }
@@ -726,6 +790,74 @@
             ctx.fillStyle = 'rgba(168, 230, 207, 0.3)';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+            // Fill subdivision zones with gradient green (lighter to darker from top to bottom)
+            const subdivisions = [16, 12, 8, 6, 4, 3, 2, 1];
+            
+            for (let i = 0; i < subdivisions.length; i++) {
+                const y1 = (i / subdivisions.length) * canvas.height;
+                const y2 = ((i + 1) / subdivisions.length) * canvas.height;
+                const height = y2 - y1;
+                
+                // Green gradient: keep it green by adjusting R, G, B proportionally
+                const progress = i / subdivisions.length;
+                const redValue = Math.floor(168 - (progress * 80));
+                const greenValue = Math.floor(230 - (progress * 100));
+                const blueValue = Math.floor(207 - (progress * 90));
+                ctx.fillStyle = `rgba(${redValue}, ${greenValue}, ${blueValue}, 0.25)`;
+                ctx.fillRect(0, y1, canvas.width, height);
+            }
+
+            // Draw subdivision guide lines (horizontal)
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([5, 5]); // Dashed line
+            
+            for (let i = 1; i < subdivisions.length; i++) {
+                const y = (i / subdivisions.length) * canvas.height;
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+            
+            // Draw subdivision labels on the right
+            ctx.setLineDash([]); // Reset to solid line
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+            ctx.font = '12px monospace';
+            ctx.textAlign = 'right';
+            
+            for (let i = 0; i < subdivisions.length; i++) {
+                const y = ((i + 0.5) / subdivisions.length) * canvas.height;
+                ctx.fillText('1/' + subdivisions[subdivisions.length - 1 - i], canvas.width - 10, y + 5);
+            }
+            
+            // Draw note guide lines (vertical)
+            const currentScaleNotes = scales[currentScale];
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([5, 5]); // Dashed line
+            
+            for (let i = 1; i < currentScaleNotes.length; i++) {
+                const x = (i / (currentScaleNotes.length - 1)) * canvas.width;
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+            
+            // Draw note labels at the bottom
+            ctx.setLineDash([]); // Reset to solid line
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+            ctx.font = 'bold 11px monospace';
+            ctx.textAlign = 'center';
+            
+            for (let i = 0; i < currentScaleNotes.length; i++) {
+                const x = (i / (currentScaleNotes.length - 1)) * canvas.width;
+                const freq = currentScaleNotes[i];
+                const noteName = getNoteName(freq);
+                ctx.fillText(noteName, x, canvas.height - 5);
+            }
+
             if (canvas.width > 0) {
                 // Calculate parameters
                 const normalizedX = mouseX / canvas.width;
@@ -741,9 +873,10 @@
                 const subdivIndex = Math.floor(normalizedY * subdivisions.length);
                 const currentSubdiv = subdivisions[Math.min(subdivIndex, subdivisions.length - 1)];
                 
-                // Calculate note interval based on subdivision
-                const beatDuration = (60 / currentBPM) * 1000; // milliseconds per beat
-                noteInterval = beatDuration / (currentSubdiv / 4);
+                // Calculate note interval based on subdivision and BPM
+                // Using a more direct formula: notes per second based on BPM
+                const notesPerMinute = currentBPM * (currentSubdiv / 4);
+                noteInterval = (60 / notesPerMinute) * 1000; // convert to milliseconds
                 
                 // Update rhythm display
                 document.getElementById('rhythmValue').textContent = '1/' + currentSubdiv;
