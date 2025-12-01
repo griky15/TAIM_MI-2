@@ -790,24 +790,8 @@
             ctx.fillStyle = 'rgba(168, 230, 207, 0.3)';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Fill subdivision zones with gradient green (lighter to darker from top to bottom)
-            const subdivisions = [16, 12, 8, 6, 4, 3, 2, 1];
-            
-            for (let i = 0; i < subdivisions.length; i++) {
-                const y1 = (i / subdivisions.length) * canvas.height;
-                const y2 = ((i + 1) / subdivisions.length) * canvas.height;
-                const height = y2 - y1;
-                
-                // Green gradient: keep it green by adjusting R, G, B proportionally
-                const progress = i / subdivisions.length;
-                const redValue = Math.floor(168 - (progress * 80));
-                const greenValue = Math.floor(230 - (progress * 100));
-                const blueValue = Math.floor(207 - (progress * 90));
-                ctx.fillStyle = `rgba(${redValue}, ${greenValue}, ${blueValue}, 0.25)`;
-                ctx.fillRect(0, y1, canvas.width, height);
-            }
-
             // Draw subdivision guide lines (horizontal)
+            const subdivisions = [16, 12, 8, 6, 4, 3, 2, 1];
             ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
             ctx.lineWidth = 1;
             ctx.setLineDash([5, 5]); // Dashed line

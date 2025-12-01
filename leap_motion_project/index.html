@@ -8,29 +8,29 @@
 </head>
 <body>
     <div class="header">
-        <h1>🎵 Instrumento Musical Gestual - Leap Motion</h1>
-        <p>Use as suas mãos para criar música no espaço 3D</p>
+        <h1>Leap Motion</h1>
+        <p>Use your hands to create music in 3D space</p>
     </div>
 
     <div class="controls">
         <div class="control-group">
-            <label>Escala Musical:</label>
+            <label>Musical Scale:</label>
             <select id="scaleSelect">
-                <option value="major">Dó Maior</option>
-                <option value="minor">Dó Menor</option>
-                <option value="pentatonic">Pentatónica</option>
+                <option value="major">C Major</option>
+                <option value="minor">C Minor</option>
+                <option value="pentatonic">Pentatonic</option>
                 <option value="blues">Blues</option>
-                <option value="chromatic">Cromática</option>
+                <option value="chromatic">Chromatic</option>
             </select>
         </div>
 
         <div class="control-group">
-            <label>Forma de Onda:</label>
+            <label>Instrument:</label>
             <select id="waveformSelect">
-                <option value="sine">Sine (Suave)</option>
-                <option value="triangle">Triangle (Médio)</option>
-                <option value="sawtooth">Sawtooth (Brilhante)</option>
-                <option value="square">Square (8-bit)</option>
+                <option value="sine">Synth</option>
+                <option value="guitar">Guitar</option>
+                <option value="saxophone">Saxophone</option>
+                <option value="piano">Piano</option>
             </select>
         </div>
 
@@ -41,11 +41,7 @@
         </div>
 
         <div class="control-group">
-            <button id="startButton">▶ Iniciar Áudio</button>
-        </div>
-
-        <div class="control-group">
-            <button id="recordButton" disabled>⏺ Gravar</button>
+            <button id="startButton">▶ Start Audio</button>
         </div>
     </div>
 
@@ -55,23 +51,23 @@
         <!-- Leap Motion Status -->
         <div class="leap-status" id="leapStatus">
             <div><strong>🔌 Leap Motion</strong></div>
-            <div id="connectionStatus">Desconectado</div>
-            <div id="handsDetected">Mãos: 0</div>
+            <div id="connectionStatus">Disconnected</div>
+            <div id="handsDetected">Hands: 0</div>
         </div>
 
         <!-- Real-time Parameters -->
         <div class="info-overlay">
-            <div><strong>📊 Parâmetros em Tempo Real:</strong></div>
-            <div>Mão Esquerda (X): <span id="leftHandX">-</span> → Nota: <span id="leftNote">-</span></div>
-            <div>Mão Direita (X): <span id="rightHandX">-</span> → Nota: <span id="rightNote">-</span></div>
-            <div>Altura (Y): <span id="handY">-</span> → Subdivisão: <span id="rhythmValue">-</span></div>
-            <div>Profundidade (Z): <span id="handZ">-</span> → Volume: <span id="volumeValue">-</span></div>
-            <div>Escala: <span id="scaleValue">Dó Maior</span></div>
+            <div><strong>📊 Real-Time Parameters:</strong></div>
+            <div>Left Hand (X): <span id="leftHandX">-</span> → Note: <span id="leftNote">-</span></div>
+            <div>Right Hand (X): <span id="rightHandX">-</span> → Note: <span id="rightNote">-</span></div>
+            <div>Height (Y): <span id="handY">-</span> → Subdivision: <span id="rhythmValue">-</span></div>
+            <div>Depth (Z): <span id="handZ">-</span> → Volume: <span id="volumeValue">-</span></div>
+            <div>Scale: <span id="scaleValue">C Major</span></div>
         </div>
 
         <!-- Rhythm Indicator -->
         <div class="rhythm-indicator">
-            <div><strong>🥁 Ritmo Ativo</strong></div>
+            <div><strong>Active Rhythm</strong></div>
             <div id="rhythmText" style="font-size: 20px; margin: 10px 0;">1/4</div>
             <div class="beat-dots" id="beatDots">
                 <div class="beat-dot"></div>
@@ -86,13 +82,14 @@
 
         <!-- Instructions -->
         <div class="instructions" id="instructions">
-            <strong>🎮 Como Usar:</strong><br>
-            <strong>Eixo X (Horizontal):</strong> Move as mãos horizontalmente para mudar a nota<br>
-            <strong>Eixo Y (Vertical):</strong> Altura da mão controla a velocidade das notas<br>
-            <strong>Eixo Z (Profundidade):</strong> Aproximar/afastar controla o volume<br>
-            <strong>Duas Mãos:</strong> Toca duas notas simultaneamente (harmonia)<br>
-            <strong>Teclas 1-5:</strong> Mudar escalas (1=Maior, 2=Menor, 3=Pentatónica, 4=Blues, 5=Cromática)<br>
-            <strong>Setas ← →:</strong> Ajustar BPM (±5 por toque)
+            <strong>🎮 How to Use:</strong><br>
+            <strong>X Axis (Horizontal):</strong> Move hands horizontally to change note<br>
+            <strong>Y Axis (Vertical):</strong> Hand height controls note speed<br>
+            <strong>Z Axis (Depth):</strong> Move closer/farther to control volume<br>
+            <strong>Two Hands:</strong> Play two notes simultaneously (harmony)<br>
+            <strong>Keys 1-5:</strong> Change scales (1=Major, 2=Minor, 3=Pentatonic, 4=Blues, 5=Chromatic)<br>
+            <strong>Arrows ← →:</strong> Change waveform/instrument<br>
+            <strong>Arrows ↑ ↓:</strong> Adjust BPM (±5 per press)
         </div>
     </div>
 

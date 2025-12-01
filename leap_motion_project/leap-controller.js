@@ -104,7 +104,7 @@ class LeapController {
     updateConnectionStatus(connected) {
         const statusElement = document.getElementById('connectionStatus');
         if (statusElement) {
-            statusElement.textContent = connected ? 'Conectado ✓' : 'Desconectado ✗';
+            statusElement.textContent = connected ? 'Connected ✓' : 'Disconnected ✗';
             statusElement.className = connected ? 'connected' : 'disconnected';
         }
     }
@@ -115,7 +115,7 @@ class LeapController {
     updateHandsDetected(count) {
         const handsElement = document.getElementById('handsDetected');
         if (handsElement) {
-            handsElement.textContent = `Mãos: ${count}`;
+            handsElement.textContent = `Hands: ${count}`;
         }
     }
     

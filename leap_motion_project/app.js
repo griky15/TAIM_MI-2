@@ -20,12 +20,15 @@ window.addEventListener('resize', resizeCanvas);
 // State
 let currentHands = { left: null, right: null };
 let currentBPM = 120;
+let currentSubdivision = 4; // Default 1/4 notes
 
 // Rhythm timing
-let noteInterval = 500; // milliseconds
 let lastNoteTime = 0;
 let currentBeat = 0;
 const beatsInBar = 4;
+
+// Subdivision levels based on Y position
+const subdivisions = [16, 12, 8, 6, 4, 3, 2, 1];
 
 // UI Elements
 const startButton = document.getElementById('startButton');
@@ -35,7 +38,6 @@ const bpmSlider = document.getElementById('bpmSlider');
 const bpmDisplay = document.getElementById('bpmDisplay');
 const infoButton = document.getElementById('infoButton');
 const instructions = document.getElementById('instructions');
-const recordButton = document.getElementById('recordButton');
 
 /**
  * Start/Stop Audio and Leap Motion
@@ -52,17 +54,15 @@ startButton.addEventListener('click', function() {
         }
         
         this.textContent = '⏸ Parar';
+        this.textContent = '⏸ Stop';
         this.style.background = '#f44336';
-        recordButton.disabled = false;
     } else {
         // Stop
         audioEngine.stop();
-        this.textContent = '▶ Iniciar Áudio';
+        this.textContent = '▶ Start Audio';
         this.style.background = '#4CAF50';
-        recordButton.disabled = true;
     }
 });
-
 /**
  * Scale selection
  */
@@ -85,11 +85,12 @@ bpmSlider.addEventListener('input', function(e) {
     currentBPM = parseInt(e.target.value);
     bpmDisplay.textContent = currentBPM;
     
-    // Update note interval based on BPM
-    const beatDuration = (60 / currentBPM) * 1000;
-    noteInterval = beatDuration / 4;
+    // Update BPM in audio engine
+    audioEngine.setBPM(currentBPM);
 });
 
+/**
+ * Info button toggle
 /**
  * Info button toggle
  */
@@ -98,29 +99,24 @@ infoButton.addEventListener('click', function() {
 });
 
 /**
- * Record button (placeholder for future implementation)
- */
-recordButton.addEventListener('click', function() {
-    this.classList.toggle('recording');
-    if (this.classList.contains('recording')) {
-        this.textContent = '⏹ Parar Gravação';
-        // TODO: Implement recording
-    } else {
-        this.textContent = '⏺ Gravar';
-        // TODO: Stop recording
-    }
-});
-
-/**
  * Keyboard shortcuts for scales (1-5)
  */
 const scaleMapping = {
-    '1': { value: 'major', text: 'Dó Maior' },
-    '2': { value: 'minor', text: 'Dó Menor' },
-    '3': { value: 'pentatonic', text: 'Pentatónica' },
+    '1': { value: 'major', text: 'C Major' },
+    '2': { value: 'minor', text: 'C Minor' },
+    '3': { value: 'pentatonic', text: 'Pentatonic' },
     '4': { value: 'blues', text: 'Blues' },
-    '5': { value: 'chromatic', text: 'Cromática' }
+    '5': { value: 'chromatic', text: 'Chromatic' }
 };
+
+// Instrument options for cycling
+const waveforms = [
+    { value: 'sine', text: 'Synth' },
+    { value: 'guitar', text: 'Guitar' },
+    { value: 'saxophone', text: 'Saxophone' },
+    { value: 'piano', text: 'Piano' }
+];
+let currentWaveformIndex = 0;
 
 document.addEventListener('keydown', function(e) {
     // Check if key 1-5 is pressed
@@ -145,17 +141,49 @@ document.addEventListener('keydown', function(e) {
         }, 200);
     }
     
-    // Arrow keys for BPM control
+    // Arrow keys horizontal (← →) for waveform/instrument control
     if (e.key === 'ArrowLeft') {
-        // Decrease BPM by 5
-        currentBPM = Math.max(60, currentBPM - 5);
-        updateBPM(currentBPM);
-        e.preventDefault(); // Prevent page scrolling
+        // Previous waveform
+        currentWaveformIndex = (currentWaveformIndex - 1 + waveforms.length) % waveforms.length;
+        const waveform = waveforms[currentWaveformIndex];
+        audioEngine.setWaveform(waveform.value);
+        waveformSelect.value = waveform.value;
+        
+        // Visual feedback
+        waveformSelect.style.background = '#4CAF50';
+        waveformSelect.style.color = 'white';
+        setTimeout(() => {
+            waveformSelect.style.background = 'rgba(255,255,255,0.9)';
+            waveformSelect.style.color = '#222';
+        }, 200);
+        e.preventDefault();
     } else if (e.key === 'ArrowRight') {
+        // Next waveform
+        currentWaveformIndex = (currentWaveformIndex + 1) % waveforms.length;
+        const waveform = waveforms[currentWaveformIndex];
+        audioEngine.setWaveform(waveform.value);
+        waveformSelect.value = waveform.value;
+        
+        // Visual feedback
+        waveformSelect.style.background = '#4CAF50';
+        waveformSelect.style.color = 'white';
+        setTimeout(() => {
+            waveformSelect.style.background = 'rgba(255,255,255,0.9)';
+            waveformSelect.style.color = '#222';
+        }, 200);
+        e.preventDefault();
+    }
+    // Arrow keys vertical (↑ ↓) for BPM control
+    else if (e.key === 'ArrowUp') {
         // Increase BPM by 5
         currentBPM = Math.min(180, currentBPM + 5);
         updateBPM(currentBPM);
-        e.preventDefault(); // Prevent page scrolling
+        e.preventDefault();
+    } else if (e.key === 'ArrowDown') {
+        // Decrease BPM by 5
+        currentBPM = Math.max(60, currentBPM - 5);
+        updateBPM(currentBPM);
+        e.preventDefault();
     }
 });
 
@@ -167,15 +195,14 @@ function updateBPM(bpm) {
     bpmSlider.value = bpm;
     bpmDisplay.textContent = bpm;
     
-    // Update note interval based on BPM
-    const beatDuration = (60 / currentBPM) * 1000;
-    noteInterval = beatDuration / 4;
+    // Update BPM in audio engine
+    audioEngine.setBPM(currentBPM);
     
     // Visual feedback (flash the BPM display)
     bpmDisplay.style.color = '#4CAF50';
     bpmDisplay.style.transform = 'scale(1.2)';
     setTimeout(() => {
-        bpmDisplay.style.color = '#4CAF50';
+        bpmDisplay.style.color = '#222';
         bpmDisplay.style.transform = 'scale(1)';
     }, 200);
 }
@@ -186,6 +213,35 @@ function updateBPM(bpm) {
 function onLeapFrame(hands) {
     currentHands = hands;
     
+    // Calculate subdivision based on Y position
+    const activeHands = [hands.left, hands.right].filter(h => h !== null);
+    
+    if (activeHands.length > 0) {
+        const avgY = activeHands.reduce((sum, h) => sum + h.position.y, 0) / activeHands.length;
+        
+        // Map Y to rhythm subdivision
+        const subdivIndex = Math.floor(avgY * subdivisions.length);
+        currentSubdivision = subdivisions[Math.min(subdivIndex, subdivisions.length - 1)];
+        
+        // Update subdivision in audio engine
+        audioEngine.setSubdivision(currentSubdivision);
+        
+        // Update UI
+        document.getElementById('handY').textContent = (avgY * 100).toFixed(0) + '%';
+        document.getElementById('rhythmValue').textContent = '1/' + currentSubdivision;
+        document.getElementById('rhythmText').textContent = '1/' + currentSubdivision;
+        
+        // Use average Z for volume display
+        const avgZ = activeHands.reduce((sum, h) => sum + h.position.z, 0) / activeHands.length;
+        document.getElementById('handZ').textContent = (avgZ * 100).toFixed(0) + '%';
+        document.getElementById('volumeValue').textContent = (avgZ * 100).toFixed(0) + '%';
+    } else {
+        document.getElementById('handY').textContent = '-';
+        document.getElementById('handZ').textContent = '-';
+        document.getElementById('rhythmValue').textContent = '-';
+        document.getElementById('volumeValue').textContent = '-';
+    }
+    
     // Update UI with hand data
     if (hands.left) {
         const leftX = (hands.left.position.x * 100).toFixed(0);
@@ -195,9 +251,9 @@ function onLeapFrame(hands) {
         document.getElementById('leftHandX').textContent = leftX + '%';
         document.getElementById('leftNote').textContent = leftNote;
         
-        // Play note for left hand
-        const volume = hands.left.position.z;
-        audioEngine.playHandNote('left', leftFreq, volume);
+        // Store hand frequency for rhythm-based playing
+        currentHands.left.frequency = leftFreq;
+        currentHands.left.volume = hands.left.position.z;
     } else {
         document.getElementById('leftHandX').textContent = '-';
         document.getElementById('leftNote').textContent = '-';
@@ -212,38 +268,13 @@ function onLeapFrame(hands) {
         document.getElementById('rightHandX').textContent = rightX + '%';
         document.getElementById('rightNote').textContent = rightNote;
         
-        // Play note for right hand
-        const volume = hands.right.position.z;
-        audioEngine.playHandNote('right', rightFreq, volume);
+        // Store hand frequency for rhythm-based playing
+        currentHands.right.frequency = rightFreq;
+        currentHands.right.volume = hands.right.position.z;
     } else {
         document.getElementById('rightHandX').textContent = '-';
         document.getElementById('rightNote').textContent = '-';
         audioEngine.stopHand('right');
-    }
-    
-    // Use average Y position for rhythm control
-    const activeHands = [hands.left, hands.right].filter(h => h !== null);
-    if (activeHands.length > 0) {
-        const avgY = activeHands.reduce((sum, h) => sum + h.position.y, 0) / activeHands.length;
-        
-        // Map Y to rhythm subdivision
-        const subdivisions = [16, 12, 8, 6, 4, 3, 2, 1];
-        const subdivIndex = Math.floor(avgY * subdivisions.length);
-        const currentSubdiv = subdivisions[Math.min(subdivIndex, subdivisions.length - 1)];
-        
-        document.getElementById('handY').textContent = (avgY * 100).toFixed(0) + '%';
-        document.getElementById('rhythmValue').textContent = '1/' + currentSubdiv;
-        document.getElementById('rhythmText').textContent = '1/' + currentSubdiv;
-        
-        // Use average Z for volume display
-        const avgZ = activeHands.reduce((sum, h) => sum + h.position.z, 0) / activeHands.length;
-        document.getElementById('handZ').textContent = (avgZ * 100).toFixed(0) + '%';
-        document.getElementById('volumeValue').textContent = (avgZ * 100).toFixed(0) + '%';
-    } else {
-        document.getElementById('handY').textContent = '-';
-        document.getElementById('handZ').textContent = '-';
-        document.getElementById('rhythmValue').textContent = '-';
-        document.getElementById('volumeValue').textContent = '-';
     }
 }
 
@@ -268,6 +299,87 @@ function animate(timestamp) {
     // Clear canvas
     ctx.fillStyle = 'rgba(168, 230, 207, 0.3)';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Draw subdivision guide lines (horizontal)
+    const subdivisionLevels = [16, 12, 8, 6, 4, 3, 2, 1];
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([5, 5]); // Dashed line
+    
+    for (let i = 1; i < subdivisionLevels.length; i++) {
+        const y = (i / subdivisionLevels.length) * canvas.height;
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(canvas.width, y);
+        ctx.stroke();
+    }
+    
+    // Draw subdivision labels on the right
+    ctx.setLineDash([]); // Reset to solid line
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+    ctx.font = '12px monospace';
+    ctx.textAlign = 'right';
+    
+    for (let i = 0; i < subdivisionLevels.length; i++) {
+        const y = ((i + 0.5) / subdivisionLevels.length) * canvas.height;
+        ctx.fillText('1/' + subdivisionLevels[subdivisionLevels.length - 1 - i], canvas.width - 10, y + 5);
+    }
+    
+    // Draw note guide lines (vertical)
+    const currentScaleNotes = audioEngine.scales[audioEngine.currentScale];
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([5, 5]); // Dashed line
+    
+    for (let i = 1; i < currentScaleNotes.length; i++) {
+        const x = (i / (currentScaleNotes.length - 1)) * canvas.width;
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, canvas.height);
+        ctx.stroke();
+    }
+    
+    // Draw note labels at the top
+    ctx.setLineDash([]); // Reset to solid line
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+    ctx.font = 'bold 11px monospace';
+    ctx.textAlign = 'center';
+    
+    for (let i = 0; i < currentScaleNotes.length; i++) {
+        const x = (i / (currentScaleNotes.length - 1)) * canvas.width;
+        const freq = currentScaleNotes[i];
+        const noteName = audioEngine.getNoteName(freq);
+        ctx.fillText(noteName, x, 15);
+    }
+    
+    // Draw note labels at the bottom
+    ctx.setLineDash([]); // Reset to solid line
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+    ctx.font = 'bold 11px monospace';
+    ctx.textAlign = 'center';
+    
+    for (let i = 0; i < currentScaleNotes.length; i++) {
+        const x = (i / (currentScaleNotes.length - 1)) * canvas.width;
+        const freq = currentScaleNotes[i];
+        const noteName = audioEngine.getNoteName(freq);
+        ctx.fillText(noteName, x, canvas.height - 5);
+    }
+    
+    // Trigger notes based on rhythm subdivision
+    if (audioEngine.isPlaying && audioEngine.shouldTriggerNote(timestamp)) {
+        // Play notes for active hands
+        if (currentHands.left && currentHands.left.frequency) {
+            audioEngine.playRhythmNote('left', currentHands.left.frequency, currentHands.left.volume);
+        }
+        
+        if (currentHands.right && currentHands.right.frequency) {
+            audioEngine.playRhythmNote('right', currentHands.right.frequency, currentHands.right.volume);
+        }
+        
+        // Update beat indicators
+        currentBeat = (currentBeat + 1) % beatsInBar;
+        updateBeatIndicators();
+    }
     
     // Draw hand indicators
     if (currentHands.left && canvas.width > 0) {
@@ -306,13 +418,6 @@ function animate(timestamp) {
         ctx.font = 'bold 20px monospace';
         ctx.textAlign = 'center';
         ctx.fillText(rightNote, x, y + 6);
-    }
-    
-    // Beat indicator
-    if (timestamp - lastNoteTime >= noteInterval) {
-        currentBeat = (currentBeat + 1) % beatsInBar;
-        updateBeatIndicators();
-        lastNoteTime = timestamp;
     }
     
     requestAnimationFrame(animate);
